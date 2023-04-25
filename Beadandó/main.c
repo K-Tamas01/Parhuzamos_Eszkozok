@@ -8,6 +8,7 @@
 #include <CL/cl.h>
 
 #define MAX_FILES 1000000
+#define MAX_CHARACTERS 255
 
 const int SAMPLE_SIZE = 1000;
 
@@ -15,8 +16,50 @@ int main(void)
 {
     char **files = (char **) malloc(sizeof(char *) * MAX_FILES);
     int count = 0;
-    dir_read("E:\\Dc-bot", files, &count, MAX_FILES);
+    dir_read("C:\\Users\\Diak\\Desktop\\N7D1L5\\1gyak", files, &count, MAX_FILES);
     printf("Found %d files:\n", count);
+    for(int i = 0; i < count; i++){
+        printf("%s\n", files[i]);
+    }
+
+
+    //read files
+    char** file_contain = (char**) malloc(sizeof(char *) * count);
+    int* sizeOfFile = (int*) malloc(sizeof(int *) * count);
+    for(int i = 0; i < count; i++){
+        FILE* src_file;
+        int size;
+
+        src_file = fopen(files[i], "rb");
+        if(src_file == NULL){
+            printf("[ERROR] Falied to open file\n");
+            return -1;
+        }
+        fseek(src_file, 0 , SEEK_END);
+        size = ftell(src_file);
+        rewind(src_file);
+        file_contain[i] = (char*) malloc(sizeof(char)* (size + 1));
+        if(file_contain[i] == NULL){
+            printf("[ERROR] Failed to allocate memory.\n");
+            return -1;
+        }
+        if (fread(file_contain[i], sizeof(char), size, src_file) != size) {
+            printf("[ERROR] Failed to read text/binary file.\n");
+            return -1;
+        }
+        file_contain[i][size] = '\0';
+        sizeOfFile[i] = size;
+        fclose(src_file);
+    }
+
+    for(int i = 0; i < count; i++){
+        printf("%s\n", files[i]);
+        fwrite(file_contain[i], 1, sizeOfFile[i], stdout);
+    }
+
+    // characters count
+
+
 
     int i;
     cl_int err;
@@ -73,7 +116,7 @@ int main(void)
     cl_context context = clCreateContext(NULL, n_devices, &device_id, NULL, NULL, NULL);
 
     // Build the program
-    cl_program program = clCreateProgramWithSource(context, 1, &source_code, NULL, NULL);
+    cl_program program = clCreateProgramWithSource(context, 1, (const char**)&source_code, NULL, NULL);
     err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
     if (err != CL_SUCCESS) {
         printf("Build error! Code: %d\n", err);
@@ -153,6 +196,10 @@ int main(void)
     clReleaseDevice(device_id);
 
     free(files);
+    free(file_contain);
+    free(sizeOfFile);
     free(host_buffer);
     free(source_code);
+
+    return 0;
 }
