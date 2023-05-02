@@ -21,76 +21,6 @@ int main(void)
         printf("%s\n", files[i]);
     }
 
-
-    //read files
-    char** file_contain = (char**) malloc(sizeof(char *) * count);
-    int* sizeOfFile = (int*) malloc(sizeof(int *) * count);
-    for(int i = 0; i < count; i++){
-        FILE* src_file;
-        int size;
-
-        src_file = fopen(files[i], "rb");
-        if(src_file == NULL){
-            printf("[ERROR] Falied to open file\n");
-            return -1;
-        }
-        fseek(src_file, 0 , SEEK_END);
-        size = ftell(src_file);
-        rewind(src_file);
-        file_contain[i] = (char*) malloc(sizeof(char)* (size + 1));
-        if(file_contain[i] == NULL){
-            printf("[ERROR] Failed to allocate memory.\n");
-            return -1;
-        }
-        if (fread(file_contain[i], sizeof(char), size, src_file) != size) {
-            printf("[ERROR] Failed to read text/binary file.\n");
-            return -1;
-        }
-        file_contain[i][size] = '\0';
-        sizeOfFile[i] = size;
-        fclose(src_file);
-    }
-
-    for(int i = 0; i < count; i++){
-        printf("\n%s\n", files[i]);
-        fwrite(file_contain[i], 1, sizeOfFile[i], stdout);
-    }
-
-    // characters count
-    char** characters = (char**) malloc(sizeof(char*) * count);
-    int** charCount = (int**) malloc(sizeof(int*) * count);
-    int* unique_countOfFiles = (int*) malloc(sizeof(int) * count);
-    for(int i = 0; i < count; i++){
-        int unique_count = 0;
-        char visited[255] = {0};
-        for(int j = 0; j < sizeOfFile[i]; j++){
-            if(visited[(int) characters[i][j]] == 0){
-                visited[(int) characters[i][j]] = 1;
-                unique_count++;
-            }
-        }
-        unique_countOfFiles[i] = unique_count;
-        characters[i] = (char*) malloc(sizeof(char*) * unique_countOfFiles[i]);
-        charCount[i] = (int*) malloc(sizeof(int) * unique_countOfFiles[i]);
-        int index = 0;
-        for(int j = 0; j < sizeOfFile[i]; j++){
-            int found = 0;
-            for(int k = 0; k < unique_countOfFiles[i] && found == 0; k++){
-                if(characters[i][k] == file_contain[i][j]){
-                    charCount[i][k]++;
-                    found = 1;
-                }
-            }
-            if(found == 0){
-                characters[i][index] = file_contain[i][j];
-                charCount[i][index] = 1;
-                index++;
-            }
-        }
-        printf("\n");
-    }
-
-    int i;
     cl_int err;
 
     // Get platform
@@ -153,34 +83,56 @@ int main(void)
     }
     cl_kernel kernel = clCreateKernel(program, "compression", NULL);
 
-    // Host buffer
-    int** huffmanTree = (int**)malloc(sizeof(int*) * count);
-
-    // Create the device buffer
-    cl_mem huffman_tree = clCreateBuffer(context, CL_MEM_READ_WRITE, count * sizeof(int), NULL, NULL);
-    cl_mem charactersInFile = clCreateBuffer(context, CL_MEM_READ_WRITE, count * sizeof(char), NULL, NULL);
-    cl_mem characters_count = clCreateBuffer(context, CL_MEM_READ_WRITE, count * sizeof(int), NULL, NULL);
-
-    // Set kernel arguments
-    clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&charactersInFile);
-    clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*)&characters_count);
-    clSetKernelArg(kernel, 2, sizeof(cl_mem), (void*)&huffman_tree);
-    for(int i = 0; i < sizeof(characters); i++){
-        int n = sizeof(characters[i]);
-        clSetKernelArg(kernel, 3, sizeof(cl_mem), (void*)&n);
-    }
-
-    // Create the command queue
-    cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
-
     for(int i = 0; i < count; i++){
+        FILE* src_file;
+        int size;
+
+        src_file = fopen(files[i], "rb");
+        if(src_file == NULL){
+            printf("[ERROR] Falied to open file\n");
+            return -1;
+        }
+
+        fseek(src_file, 0 , SEEK_END);
+        size = ftell(src_file);
+        rewind(src_file);
+        char* characters = (char*) malloc(sizeof(char) * (size + 1));
+        if(characters == NULL){
+            printf("[ERROR] Failed to allocate memory.\n");
+            return -1;
+        }
+        if (fread(characters, sizeof(char), size, src_file) != size) {
+            printf("[ERROR] Failed to read text/binary file.\n");
+            return -1;
+        }
+
+        characters[size] = '\0';
+        fclose(src_file);
+
+        char* uniChars = (char*) malloc(sizeof(char) * 256);
+        int* uniCharsCount = (int*) malloc(sizeof(int) * 256);
+
+        //Host buffers
+        cl_mem chars = clCreateBuffer(context, CL_MEM_READ_WRITE, size * sizeof(char), NULL, NULL);
+        cl_mem uniCharCount = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
+        cl_mem uniCharsBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
+
+        // Set kernel arguments
+        clSetKernelArg(kernel, 0, sizeof(cl_mem), &chars);
+        clSetKernelArg(kernel, 1, sizeof(int), &size);
+        clSetKernelArg(kernel, 2, sizeof(cl_mem), &uniCharCount);
+        clSetKernelArg(kernel, 3, sizeof(cl_mem), &uniCharsBuffer);
+
+        // Create the command queue
+        cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
+
         clEnqueueWriteBuffer(
             command_queue,
-            charactersInFile,
+            chars,
             CL_FALSE,
             0,
-            sizeOfFile[i] * sizeof(int),
-            characters[i],
+            size * sizeof(char),
+            characters,
             0,
             NULL,
             NULL
@@ -188,11 +140,11 @@ int main(void)
 
         clEnqueueWriteBuffer(
             command_queue,
-            characters_count,
+            uniCharCount,
             CL_FALSE,
             0,
-            sizeOfFile[i] * sizeof(int),
-            charCount[i],
+            255 * sizeof(int),
+            uniCharsCount,
             0,
             NULL,
             NULL
@@ -219,46 +171,52 @@ int main(void)
         // Host buffer <- Device buffer
         clEnqueueReadBuffer(
             command_queue,
-            huffman_tree,
+            uniCharsBuffer,
             CL_TRUE,
             0,
-            count * sizeof(int),
-            huffmanTree[i],
+            256 * sizeof(int),
+            uniChars,
             0,
             NULL,
             NULL
         );
-
 
         clEnqueueReadBuffer(
             command_queue,
-            charactersInFile,
+            uniCharCount,
             CL_TRUE,
             0,
-            count * sizeof(int),
-            characters[i],
-            0,
-            NULL,
-            NULL
-        );
-        clEnqueueReadBuffer(
-            command_queue,
-            characters_count,
-            CL_TRUE,
-            0,
-            count * sizeof(int),
-            charCount[i],
+            256 * sizeof(int),
+            uniCharsCount,
             0,
             NULL,
             NULL
         );
 
-    }
+        printf("%c", "b");
 
-    for(int i = 0; i < count; i++){
-        for(int j = 0; j < 12; j++){
-            printf("%c: %d\n", characters[i][j], charCount[i][j]);
-        }
+        // huffman fa építés
+
+        // for(int i = 0; i < strlen(uniChars) - 1; i++){
+        //     char temp;
+        //     for(int j = i + 1; j < strlen(uniChars)){
+        //         if(uniCharCount[i] > uniCharCount[j]){
+        //             temp = uniChars[i];
+        //             uniChars[i] = uniChars[j];
+        //             uniChars[j] = temp;
+
+        //             uniCharCount[i] += uniCharCount[j];
+        //             uniCharCount[j] = uniCharCount[i] - uniCharCount[j];
+        //             uniCharCount[i] = uniCharCount[i] - uniCharCount[j];
+        //         }
+        //     }
+        // }
+
+        clReleaseMemObject(uniCharsBuffer);
+        clReleaseMemObject(uniCharCount);
+        clReleaseMemObject(chars);
+        free(uniChars);
+        free(characters);
     }
 
     // Release the resources
@@ -267,13 +225,8 @@ int main(void)
     clReleaseContext(context);
     clReleaseDevice(device_id);
 
-    free(characters);
-    free(charCount);
     free(files);
-    free(file_contain);
-    free(sizeOfFile);
     free(source_code);
-    free(huffman_tree);
 
     return 0;
 }

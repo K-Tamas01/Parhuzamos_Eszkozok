@@ -1,19 +1,11 @@
-__kernel void compression(__global char* characters, __global int* unichar_count, __global int* huffman_code, int array_size) {
+__kernel void compression(__global char* chars, int size, __global int* uniCharCount, __global int* uniChars) {
     int id = get_global_id(0);
+    if(id >= size) return;
 
-    if(id >= array_size){
-        return;
-    }
+    int ascii = (int)chars[id];
+    atomic_add(&uniCharCount[ascii], 1);
 
-    char temp;
-    for (int i = 0; i < array_size; i++) {
-        if (unichar_count[id] > unichar_count[i]) {
-            temp = characters[id];
-            characters[id] = characters[i];
-            characters[i] = temp;
-            unichar_count[i] = unichar_count[id] + unichar_count[i];
-            unichar_count[id] = unichar_count[i] - unichar_count[id];
-            unichar_count[i] = unichar_count[i] - unichar_count[id];
-        }
+    if (uniCharCount[ascii] == 1) {
+        atomic_add(&uniChars[0], 1);
     }
 }
