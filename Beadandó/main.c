@@ -81,7 +81,7 @@ int main(void)
         printf("Build error! Code: %d\n", err);
         return 0;
     }
-    cl_kernel kernel = clCreateKernel(program, "compression", NULL);
+    cl_kernel kernel = clCreateKernel(program, "count_chars", NULL);
 
     for(int i = 0; i < count; i++){
         FILE* src_file;
@@ -96,7 +96,7 @@ int main(void)
         fseek(src_file, 0 , SEEK_END);
         size = ftell(src_file);
         rewind(src_file);
-        char* characters = (char*) malloc(sizeof(char) * (size + 1));
+        char characters[size];
         if(characters == NULL){
             printf("[ERROR] Failed to allocate memory.\n");
             return -1;
@@ -109,19 +109,22 @@ int main(void)
         characters[size] = '\0';
         fclose(src_file);
 
-        char* uniChars = (char*) malloc(sizeof(char) * 256);
-        int* uniCharsCount = (int*) malloc(sizeof(int) * 256);
+        int uniChars[256];
+        int uniCharsCount[256];
+        int numberOfLetters = 0;
 
         //Host buffers
         cl_mem chars = clCreateBuffer(context, CL_MEM_READ_WRITE, size * sizeof(char), NULL, NULL);
         cl_mem uniCharCount = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
         cl_mem uniCharsBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
+        cl_mem lettersCount = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int), NULL, NULL);
 
         // Set kernel arguments
         clSetKernelArg(kernel, 0, sizeof(cl_mem), &chars);
         clSetKernelArg(kernel, 1, sizeof(int), &size);
         clSetKernelArg(kernel, 2, sizeof(cl_mem), &uniCharCount);
         clSetKernelArg(kernel, 3, sizeof(cl_mem), &uniCharsBuffer);
+        clSetKernelArg(kernel, 4, sizeof(cl_mem), &lettersCount);
 
         // Create the command queue
         cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
@@ -143,7 +146,7 @@ int main(void)
             uniCharCount,
             CL_FALSE,
             0,
-            255 * sizeof(int),
+            256 * sizeof(int),
             uniCharsCount,
             0,
             NULL,
@@ -193,7 +196,25 @@ int main(void)
             NULL
         );
 
-        printf("%c", "b");
+        clEnqueueReadBuffer(
+            command_queue,
+            lettersCount,
+            CL_TRUE,
+            0,
+            sizeof(int),
+            &numberOfLetters,
+            0,
+            NULL,
+            NULL
+        );
+
+        clReleaseMemObject(chars);
+        clReleaseMemObject(uniCharCount);
+        clReleaseMemObject(uniCharsBuffer);
+
+        for(int i = 0; i < numberOfLetters; i++){
+            printf("%c: %d\n",uniChars[i], uniCharsCount[i]);
+        }
 
         // huffman fa építés
 
@@ -211,12 +232,6 @@ int main(void)
         //         }
         //     }
         // }
-
-        clReleaseMemObject(uniCharsBuffer);
-        clReleaseMemObject(uniCharCount);
-        clReleaseMemObject(chars);
-        free(uniChars);
-        free(characters);
     }
 
     // Release the resources
