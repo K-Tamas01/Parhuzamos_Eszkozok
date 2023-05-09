@@ -111,20 +111,15 @@ int main(void)
 
         int uniChars[256];
         int uniCharsCount[256];
-        int numberOfLetters = 0;
 
         //Host buffers
         cl_mem chars = clCreateBuffer(context, CL_MEM_READ_WRITE, size * sizeof(char), NULL, NULL);
         cl_mem uniCharCount = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
-        cl_mem uniCharsBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 256 * sizeof(int), NULL, NULL);
-        cl_mem lettersCount = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int), NULL, NULL);
 
         // Set kernel arguments
         clSetKernelArg(kernel, 0, sizeof(cl_mem), &chars);
         clSetKernelArg(kernel, 1, sizeof(int), &size);
         clSetKernelArg(kernel, 2, sizeof(cl_mem), &uniCharCount);
-        clSetKernelArg(kernel, 3, sizeof(cl_mem), &uniCharsBuffer);
-        clSetKernelArg(kernel, 4, sizeof(cl_mem), &lettersCount);
 
         // Create the command queue
         cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
@@ -136,18 +131,6 @@ int main(void)
             0,
             size * sizeof(char),
             characters,
-            0,
-            NULL,
-            NULL
-        );
-
-        clEnqueueWriteBuffer(
-            command_queue,
-            uniCharCount,
-            CL_FALSE,
-            0,
-            256 * sizeof(int),
-            uniCharsCount,
             0,
             NULL,
             NULL
@@ -172,17 +155,6 @@ int main(void)
         );
 
         // Host buffer <- Device buffer
-        clEnqueueReadBuffer(
-            command_queue,
-            uniCharsBuffer,
-            CL_TRUE,
-            0,
-            256 * sizeof(int),
-            uniChars,
-            0,
-            NULL,
-            NULL
-        );
 
         clEnqueueReadBuffer(
             command_queue,
@@ -196,42 +168,16 @@ int main(void)
             NULL
         );
 
-        clEnqueueReadBuffer(
-            command_queue,
-            lettersCount,
-            CL_TRUE,
-            0,
-            sizeof(int),
-            &numberOfLetters,
-            0,
-            NULL,
-            NULL
-        );
-
         clReleaseMemObject(chars);
         clReleaseMemObject(uniCharCount);
-        clReleaseMemObject(uniCharsBuffer);
 
-        for(int i = 0; i < numberOfLetters; i++){
-            printf("%c: %d\n",uniChars[i], uniCharsCount[i]);
+        printf("%s\n", files[i]);
+        for(int j = 0; j < 256; j++){
+            if(uniCharsCount[j] != 0){
+                printf("%c: %d\n", j, uniCharsCount[j]);
+            }
         }
-
-        // huffman fa építés
-
-        // for(int i = 0; i < strlen(uniChars) - 1; i++){
-        //     char temp;
-        //     for(int j = i + 1; j < strlen(uniChars)){
-        //         if(uniCharCount[i] > uniCharCount[j]){
-        //             temp = uniChars[i];
-        //             uniChars[i] = uniChars[j];
-        //             uniChars[j] = temp;
-
-        //             uniCharCount[i] += uniCharCount[j];
-        //             uniCharCount[j] = uniCharCount[i] - uniCharCount[j];
-        //             uniCharCount[i] = uniCharCount[i] - uniCharCount[j];
-        //         }
-        //     }
-        // }
+        printf("\n");
     }
 
     // Release the resources
