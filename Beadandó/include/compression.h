@@ -9,6 +9,6 @@
  * 
  * Returns by a dynamically allocated string
  */
-int compreession();
+int compreession(char* route, int* data);
 
 #endif

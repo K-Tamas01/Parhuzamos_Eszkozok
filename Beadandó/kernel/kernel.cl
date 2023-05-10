@@ -3,7 +3,7 @@ __kernel void count_chars(__global const unsigned char* chars, const int size, _
 
     if(id >= size) return;
 
-    uint uniCode = chars[id];
+    int uniCode = chars[id];
     
     if(uniCode < 0){
         atomic_inc(&uniCharCount[uniCode + 256]);

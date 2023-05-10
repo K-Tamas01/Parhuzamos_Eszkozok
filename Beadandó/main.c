@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "dir_con.h"
 #include "compression.h"
@@ -13,6 +14,7 @@
 
 int main(void)
 {
+    clock_t start = clock();
     char **files = (char **) malloc(sizeof(char *) * MAX_FILES);
     int count = 0;
     dir_read("Adatok", files, &count, MAX_FILES);
@@ -51,6 +53,9 @@ int main(void)
     FILE* source_file;
     char* source_code;
     int file_size;
+    double allWriteTime[count];
+    double allReadTime[count];
+    double allKernelTime[count];
 
     source_file = fopen("./kernel/kernel.cl", "rb");
     if (source_file == NULL) {
@@ -67,7 +72,6 @@ int main(void)
         return -1;
     }
     source_code[file_size] = '\0';
-
     fclose(source_file);
 
 
@@ -109,7 +113,6 @@ int main(void)
         characters[size] = '\0';
         fclose(src_file);
 
-        int uniChars[256];
         int uniCharsCount[256];
 
         //Host buffers
@@ -124,6 +127,8 @@ int main(void)
         // Create the command queue
         cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
 
+        clock_t writeStart = clock();
+
         clEnqueueWriteBuffer(
             command_queue,
             chars,
@@ -136,10 +141,15 @@ int main(void)
             NULL
         );
 
+        clock_t writeEnd = clock();
+        allWriteTime[i] = (double)((writeEnd - writeStart) / CLOCKS_PER_SEC);
+
         // Size specification
         size_t local_work_size = 256;
         size_t n_work_groups = (GLOBAL_WORKERS + local_work_size + 1) / local_work_size;
         size_t global_work_size = n_work_groups * local_work_size;
+
+        clock_t kernelStart = clock();
 
         // Apply the kernel on the range
         clEnqueueNDRangeKernel(
@@ -154,7 +164,14 @@ int main(void)
             NULL
         );
 
+        clFinish(command_queue);
+
+        clock_t kernelEnd = clock();
+        allKernelTime[i] = (double)((writeEnd - writeStart) / CLOCKS_PER_SEC);
+
         // Host buffer <- Device buffer
+
+        clock_t readStart = clock();
 
         clEnqueueReadBuffer(
             command_queue,
@@ -168,16 +185,13 @@ int main(void)
             NULL
         );
 
+        clock_t readEnd = clock();
+        allReadTime[i] = (double)((writeEnd - writeStart) / CLOCKS_PER_SEC);
+
         clReleaseMemObject(chars);
         clReleaseMemObject(uniCharCount);
 
-        printf("%s\n", files[i]);
-        for(int j = 0; j < 256; j++){
-            if(uniCharsCount[j] != 0){
-                printf("%c: %d\n", j, uniCharsCount[j]);
-            }
-        }
-        printf("\n");
+        compreession(files[i], uniCharsCount);
     }
 
     // Release the resources
@@ -188,6 +202,40 @@ int main(void)
 
     free(files);
     free(source_code);
+
+    clock_t end = clock();
+    double runTime = (double)(end - start)/ CLOCKS_PER_SEC;
+
+    double sumReadTime = 0.0;
+    double sumWriteTime = 0.0;
+    double sumKernelTime = 0.0;
+
+    for(int i = 0; i < count; i++){
+        sumReadTime += (double)allReadTime[i];
+        sumWriteTime += (double)allWriteTime[i];
+        sumKernelTime += (double)allKernelTime[i];
+    }
+
+
+    printf("Readtime: %f sec\n", sumReadTime);
+    for(int i = 0; i < count; i++){
+        printf("\t%d Read the contents of the buffer from a kernel: %f sec\n", i+1, allReadTime[i]);
+    }
+    printf("\n");
+    printf("Writetime: %f sec\n", sumWriteTime);
+    for(int i = 0; i < count; i++){
+        printf("\t%d Write the contents of the file to a buffer: %f sec\n", i+1, allReadTime[i]);
+    }
+    printf("\n");
+    printf("Kerneltime: %f sec\n", sumKernelTime);
+    for(int i = 0; i < count; i++){
+        printf("\t%d kernel runtime: %f sec\n", i+1, allReadTime[i]);
+    }
+    free(allReadTime);
+    free(allWriteTime);
+    free(allKernelTime);
+    printf("\n");
+    printf("Runtime: %f sec\n", runTime);
 
     return 0;
 }
