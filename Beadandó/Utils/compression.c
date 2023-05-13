@@ -5,6 +5,7 @@
 struct Node{
     char character;
     int freq;
+    int marked;
     struct Node *left, *right;
 };
 
@@ -35,39 +36,64 @@ int compreession(char* route, int* data){
         }
     }
 
-    struct Node* node = (struct Node*)malloc(sizeof(struct Node) * count);
-    struct Node* leaf = (struct Node*)malloc(sizeof(struct Node) * (count - 1));
-
-    //Root leaf init
-    leaf[0].character = '\0';
-    leaf[0].freq = 0;
-    leaf[0].left = &leaf[1];
-    leaf[0].right = &leaf[2];
-
-    //Leaf init
-    for(int i = 1; i < count - 1; i++){
-        leaf[i].character = '\0';
-        leaf[i].freq = 0;
-        leaf[i].left = NULL;
-        leaf[i].right = NULL;
-    }
+    int nodeCount = 2 * count;
+    struct Node* node = (struct Node*)malloc(sizeof(struct Node) * nodeCount - 1);
 
     //Node init
-    for(int i = 0; i < count; i++){
-        node[i].character = uniChar[i];
-        node[i].freq = charCount[i];
+    for(int i = 0; i < nodeCount; i++){
+        node[i].character = i < count ? uniChar[i] : '\0';
+        node[i].freq = i < count ? charCount[i] : 0;
+        node[i].marked = 0;
         node[i].left = NULL;
         node[i].right = NULL;
-        leaf[0].freq += charCount[i];
     }
 
-    for(int i = 0; i < count - 1; i++){
-        printf("%c - %d - %p - %p\n", leaf[i].character, leaf[i].freq, leaf[i].right, leaf[i].left);
+    for(int i = 0; i < nodeCount; i++){
+        printf("%d\n", node[i].freq);
     }
-    
 
+    while(nodeCount > count - 1){
+        int min_1 = -1, min_2 = -1;
+        for(int i = 0; i < (2 * count) - 1; i++){
+            if(node[i].marked == 0 && node[i].freq > 0){
+                if(min_1 == -1 || node[i].freq < node[min_1].freq){
+                    min_2 = min_1;
+                    min_1 = i;
+                }
+                else if(min_2 == -1 || node[i].freq < node[min_2].freq){
+                    min_2 = i;
+                }
+            }
+        }
 
-    free(leaf);
+        for(int i = 0; i < (2 * count) - 1; i++){
+            if(node[i].marked == 0){
+                if(node[i].freq < node[min_1].freq){
+                    min_1 = i;
+                    if(node[min_1].freq < node[min_2].freq){
+                        min_1 += min_2;
+                        min_2 = min_1 - min_2;
+                        min_1 = min_1 - min_2;
+                    }
+                }
+            }
+        }
+        node[min_1].marked = 1;
+        node[min_2].marked = 1;
+        node[nodeCount].left = &node[min_1];
+        node[nodeCount].right = &node[min_2];
+        node[nodeCount].freq = node[min_1].freq + node[min_2].freq;
+        nodeCount--;
+    }
+
+    for(int i = 0; i < (2 * count) - 1; i++){
+        printf("%c - %d - %p - %p\n", node[i].character, node[i].freq, node[i].left, node[i].right);
+    }
+
+    for(int i = 0; i < (2 * count) - 1; i++){
+        printf("%c - %p\n", node[i].character, &node[i]);
+    }
+
     free(node);
     free(charCount);
     free(uniChar);
