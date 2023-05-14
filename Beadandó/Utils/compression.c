@@ -36,8 +36,8 @@ int compreession(char* route, int* data){
         }
     }
 
-    int nodeCount = 2 * count;
-    struct Node* node = (struct Node*)malloc(sizeof(struct Node) * nodeCount - 1);
+    int nodeCount = (2 * count) - 1;
+    struct Node* node = (struct Node*)malloc(sizeof(struct Node) * nodeCount);
 
     //Node init
     for(int i = 0; i < nodeCount; i++){
@@ -48,36 +48,20 @@ int compreession(char* route, int* data){
         node[i].right = NULL;
     }
 
-    for(int i = 0; i < nodeCount; i++){
-        printf("%d\n", node[i].freq);
-    }
-
+    nodeCount--;
     while(nodeCount > count - 1){
         int min_1 = -1, min_2 = -1;
-        for(int i = 0; i < (2 * count) - 1; i++){
+        for(int i = 0; i < (2 *count) - 1; i++){
             if(node[i].marked == 0 && node[i].freq > 0){
-                if(min_1 == -1 || node[i].freq < node[min_1].freq){
+                if(min_1 == -1 || node[min_1].freq > node[i].freq){
                     min_2 = min_1;
                     min_1 = i;
-                }
-                else if(min_2 == -1 || node[i].freq < node[min_2].freq){
+                }else if(node[min_2].freq > node[i].freq){
                     min_2 = i;
                 }
             }
         }
-
-        for(int i = 0; i < (2 * count) - 1; i++){
-            if(node[i].marked == 0){
-                if(node[i].freq < node[min_1].freq){
-                    min_1 = i;
-                    if(node[min_1].freq < node[min_2].freq){
-                        min_1 += min_2;
-                        min_2 = min_1 - min_2;
-                        min_1 = min_1 - min_2;
-                    }
-                }
-            }
-        }
+        
         node[min_1].marked = 1;
         node[min_2].marked = 1;
         node[nodeCount].left = &node[min_1];
@@ -87,12 +71,9 @@ int compreession(char* route, int* data){
     }
 
     for(int i = 0; i < (2 * count) - 1; i++){
-        printf("%c - %d - %p - %p\n", node[i].character, node[i].freq, node[i].left, node[i].right);
+        printf("%c - %d - %p - %p - %p\n", node[i].character, node[i].freq, node[i].left, node[i].right, &node[i]);
     }
-
-    for(int i = 0; i < (2 * count) - 1; i++){
-        printf("%c - %p\n", node[i].character, &node[i]);
-    }
+    printf("\n");
 
     free(node);
     free(charCount);
