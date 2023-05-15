@@ -9,6 +9,22 @@ struct Node{
     struct Node *left, *right;
 };
 
+struct charTable{
+    char character;
+    char code;
+};
+
+void fillCodeTable(struct Node* root, struct charTable* table, int index, char code){
+    if(root->left == NULL && root->right == NULL){
+        table[index].character = root->character;
+        table[index].code = code;
+        return;
+    }
+
+    fillCodeTable(root->left, table, index, code <<= 1);
+    fillCodeTable(root->right, table, index, code <<= 1 | 1);
+}
+
 int compreession(char* route, int* data){
 
     char size = 0;
@@ -75,6 +91,16 @@ int compreession(char* route, int* data){
     }
     printf("\n");
 
+    //Code tábla
+    struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
+
+    fillCodeTable(&node[count], table, 0, 0);
+
+    for(int i = 0; i < count; i++){
+        printf("%c - %s\n", table[i].character, table[i].code);
+    }
+
+    free(table);
     free(node);
     free(charCount);
     free(uniChar);
