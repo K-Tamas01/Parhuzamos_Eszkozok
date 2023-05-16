@@ -100,6 +100,7 @@ int main(void)
         fseek(src_file, 0 , SEEK_END);
         size = ftell(src_file);
         rewind(src_file);
+        printf("%d\n", size);
         char characters[size];
         if(characters == NULL){
             printf("[ERROR] Failed to allocate memory.\n");
@@ -231,9 +232,6 @@ int main(void)
     for(int i = 0; i < count; i++){
         printf("\t%d kernel runtime: %f sec\n", i+1, allReadTime[i]);
     }
-    free(allReadTime);
-    free(allWriteTime);
-    free(allKernelTime);
     printf("\n");
     printf("Runtime: %f sec\n", runTime);
 
