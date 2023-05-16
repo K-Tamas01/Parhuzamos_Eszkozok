@@ -1,6 +1,7 @@
 #include "compression.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 struct Node{
     char character;
@@ -9,20 +10,31 @@ struct Node{
     struct Node *left, *right;
 };
 
-struct charTable{
-    char character;
-    char code;
-};
+// struct charTable{
+//     char character;
+//     char code;
+// };
 
-void fillCodeTable(struct Node* root, struct charTable* table, int index, char code){
+// void fillCodeTable(struct Node* root, struct charTable* table, int index, char code){
+//     if(root->left == NULL && root->right == NULL){
+//         table[index].character = root->character;
+//         table[index].code = code;
+//         return;
+//     }
+
+//     fillCodeTable(root->left, table, index, code <<= 1);
+//     fillCodeTable(root->right, table, index, code <<= 1 | 1);
+// }
+
+void drawTree(struct Node* root){
     if(root->left == NULL && root->right == NULL){
-        table[index].character = root->character;
-        table[index].code = code;
         return;
     }
 
-    fillCodeTable(root->left, table, index, code <<= 1);
-    fillCodeTable(root->right, table, index, code <<= 1 | 1);
+    printf("\"%p\" -> \"%p\"[label=0];\n", root, root->left);
+    drawTree(root->left);
+    printf("\"%p\" -> \"%p\"[label=1];\n", root, root->right);
+    drawTree(root->right);
 }
 
 int compreession(char* route, int* data){
@@ -53,7 +65,7 @@ int compreession(char* route, int* data){
     }
 
     int nodeCount = (2 * count) - 1;
-    struct Node* node = (struct Node*)malloc(sizeof(struct Node) * nodeCount);
+    struct Node* node = (struct Node*)calloc(sizeof(struct Node), nodeCount);
 
     //Node init
     for(int i = 0; i < nodeCount; i++){
@@ -72,12 +84,14 @@ int compreession(char* route, int* data){
                 if(min_1 == -1 || node[min_1].freq > node[i].freq){
                     min_2 = min_1;
                     min_1 = i;
-                }else if(node[min_2].freq > node[i].freq){
+                }else if(min_2 == -1 || node[min_2].freq > node[i].freq){
                     min_2 = i;
                 }
             }
         }
-        
+
+        printf("%d - %d\n",min_1, min_2);
+
         node[min_1].marked = 1;
         node[min_2].marked = 1;
         node[nodeCount].left = &node[min_1];
@@ -86,21 +100,25 @@ int compreession(char* route, int* data){
         nodeCount--;
     }
 
+    printf("count %d\n", count);
+
     for(int i = 0; i < (2 * count) - 1; i++){
         printf("%c - %d - %p - %p - %p\n", node[i].character, node[i].freq, node[i].left, node[i].right, &node[i]);
     }
     printf("\n");
 
     //Code tábla
-    struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
+    // struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
+    drawTree(&node[count]);
+    // fillCodeTable(&node[count], table, 0, 0);
 
-    fillCodeTable(&node[count], table, 0, 0);
+    // for(int i = 0; i < count; i++){
+    //     printf("%c - %s\n", table[i].character, table[i].code);
+    // }
 
-    for(int i = 0; i < count; i++){
-        printf("%c - %s\n", table[i].character, table[i].code);
-    }
 
-    free(table);
+
+    // free(table);
     free(node);
     free(charCount);
     free(uniChar);
