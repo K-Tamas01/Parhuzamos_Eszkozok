@@ -2,5 +2,5 @@
 
 void writeToFile(){
 
-    return 0;
+    return;
 }
