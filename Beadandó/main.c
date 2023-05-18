@@ -85,7 +85,6 @@ int main(void)
         printf("Build error! Code: %d\n", err);
         return 0;
     }
-    cl_kernel kernel = clCreateKernel(program, "count_chars", NULL);
 
     for(int i = 0; i < count; i++){
         FILE* src_file;
@@ -101,7 +100,7 @@ int main(void)
         size = ftell(src_file);
         rewind(src_file);
         printf("%d\n", size);
-        char characters[size];
+        char characters[size + 1];
         if(characters == NULL){
             printf("[ERROR] Failed to allocate memory.\n");
             return -1;
@@ -114,7 +113,10 @@ int main(void)
         characters[size] = '\0';
         fclose(src_file);
 
-        int uniCharsCount[256];
+        int uniCharsCount[256] = {0};
+
+        //kernel
+        cl_kernel kernel = clCreateKernel(program, "count_chars", NULL);
 
         //Host buffers
         cl_mem chars = clCreateBuffer(context, CL_MEM_READ_WRITE, size * sizeof(char), NULL, NULL);
@@ -127,6 +129,7 @@ int main(void)
 
         // Create the command queue
         cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &err);
+        cl_event readEvent;
 
         clock_t writeStart = clock();
 
@@ -168,7 +171,7 @@ int main(void)
         clFinish(command_queue);
 
         clock_t kernelEnd = clock();
-        allKernelTime[i] = (double)((writeEnd - writeStart) / CLOCKS_PER_SEC);
+        allKernelTime[i] = (double)((kernelEnd - kernelStart) / CLOCKS_PER_SEC);
 
         // Host buffer <- Device buffer
 
@@ -183,20 +186,23 @@ int main(void)
             uniCharsCount,
             0,
             NULL,
-            NULL
+            &readEvent
         );
 
+        clWaitForEvents(1, &readEvent);
+
         clock_t readEnd = clock();
-        allReadTime[i] = (double)((writeEnd - writeStart) / CLOCKS_PER_SEC);
+        allReadTime[i] = (double)((readEnd - readStart) / CLOCKS_PER_SEC);
 
         clReleaseMemObject(chars);
         clReleaseMemObject(uniCharCount);
+        clReleaseCommandQueue(command_queue);
+        clReleaseKernel(kernel);
 
-        compreession(files[i], uniCharsCount);
+        compreession(files[i], uniCharsCount); 
     }
 
     // Release the resources
-    clReleaseKernel(kernel);
     clReleaseProgram(program);
     clReleaseContext(context);
     clReleaseDevice(device_id);

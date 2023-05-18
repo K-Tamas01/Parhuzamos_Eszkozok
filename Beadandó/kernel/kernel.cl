@@ -1,7 +1,10 @@
-__kernel void count_chars(__global const unsigned char* chars, const int size, __global int* uniCharCount) {
+__kernel void count_chars(__global const unsigned char* chars, const int size, __global int* uniCharCount) {   
     int id = get_global_id(0);
 
-    if(id >= size) return;
+    if(id >= size){
+        uniCharCount[id] = 0;
+        return;
+    }
 
     int uniCode = chars[id];
     

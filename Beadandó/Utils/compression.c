@@ -10,21 +10,30 @@ struct Node{
     struct Node *left, *right;
 };
 
-// struct charTable{
-//     char character;
-//     char code;
-// };
+struct charTable{
+    char character;
+    char* code;
+};
 
-// void fillCodeTable(struct Node* root, struct charTable* table, int index, char code){
-//     if(root->left == NULL && root->right == NULL){
-//         table[index].character = root->character;
-//         table[index].code = code;
-//         return;
-//     }
+void fillCodeTable(struct Node* root, struct charTable* table, int index, int length, char* code){
+    if(root->left == NULL && root->right == NULL){
+        table[index].character = root->character;
+        table[index].code = (char*)calloc(length, sizeof(char));
+        for(int i = 0; i < length; i++){
+            table[index].code[i] = (char)code[i];
+        }
+        printf("%c - %s\n", table[index].character, table[index].code);
+        index++;
+        return;
+    }
 
-//     fillCodeTable(root->left, table, index, code <<= 1);
-//     fillCodeTable(root->right, table, index, code <<= 1 | 1);
-// }
+    code[length] = '0';
+    fillCodeTable(root->left, table, index, ++length, code);
+    length--;
+    code[length] = '1';
+    fillCodeTable(root->right, table, index, ++length, code);
+}
+
 
 void drawTree(struct Node* root){
     if(root->left == NULL && root->right == NULL){
@@ -89,9 +98,7 @@ int compreession(char* route, int* data){
                 }
             }
         }
-
-        printf("%d - %d\n",min_1, min_2);
-
+        
         node[min_1].marked = 1;
         node[min_2].marked = 1;
         node[nodeCount].left = &node[min_1];
@@ -108,20 +115,18 @@ int compreession(char* route, int* data){
     printf("\n");
 
     //Code tábla
-    // struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
+    struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
+    char* code = (char*)malloc(sizeof(char)*8);
     drawTree(&node[count]);
-    // fillCodeTable(&node[count], table, 0, 0);
-
-    // for(int i = 0; i < count; i++){
-    //     printf("%c - %s\n", table[i].character, table[i].code);
-    // }
+    fillCodeTable(&node[count], table, 0, 0, code);
 
 
-
-    // free(table);
+    free(code);
+    free(table);
     free(node);
     free(charCount);
     free(uniChar);
 
+    printf("\n");
     return 0;
 }
