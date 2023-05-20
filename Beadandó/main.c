@@ -199,7 +199,7 @@ int main(void)
         clReleaseCommandQueue(command_queue);
         clReleaseKernel(kernel);
 
-        compreession(files[i], uniCharsCount); 
+        compreession(files[i], uniCharsCount, characters, size); 
     }
 
     // Release the resources
