@@ -1,4 +1,5 @@
 #include "compression.h"
+#include "structHeader.h"
 #include "writeToFile.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,20 +12,15 @@ struct Node{
     struct Node *left, *right;
 };
 
-struct charTable{
-    char character;
-    char* code;
-};
-
-void fillCodeTable(struct Node* root, struct charTable* table, int index, int length, char* code){
+void fillCodeTable(struct Node* root, struct charTable* table, int* index, int length, char* code){
     if(root->left == NULL && root->right == NULL){
-        table[index].character = root->character;
-        table[index].code = (char*)calloc(length + 1, sizeof(char));
+        table[(*index)].character = root->character;
+        table[(*index)].code = (char*)calloc(length + 1, sizeof(char));
         for(int i = 0; i < length; i++){
-            table[index].code[i] = (char)code[i];
+            table[(*index)].code[i] = (char)code[i];
         }
-        printf("%c - %s\n", table[index].character, table[index].code);
-        index++;
+        printf("%c - %s\n", table[(*index)].character, table[(*index)].code);
+        (*index)++;
         return;
     }
 
@@ -47,7 +43,7 @@ void drawTree(struct Node* root){
     drawTree(root->right);
 }
 
-int compreession(char* route, int* data){
+int compreession(char* route, int* data, char* characters, int fSize){
 
     char size = 0;
     int count = 0;
@@ -118,11 +114,11 @@ int compreession(char* route, int* data){
     //Code tábla
     struct charTable* table = (struct charTable*)malloc(sizeof(struct charTable) * count);
     char* code = (char*)malloc(sizeof(char)*8);
+    int index = 0;
     drawTree(&node[count]);
-    fillCodeTable(&node[count], table, 0, 0, code);
+    fillCodeTable(&node[count], table, &index, 0, code);
 
-    writeToFile(route);
-
+    writeToFile(route, table, characters, fSize, count);
 
     free(code);
     free(table);
