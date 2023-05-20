@@ -1,4 +1,5 @@
 #include "compression.h"
+#include "writeToFile.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -18,7 +19,7 @@ struct charTable{
 void fillCodeTable(struct Node* root, struct charTable* table, int index, int length, char* code){
     if(root->left == NULL && root->right == NULL){
         table[index].character = root->character;
-        table[index].code = (char*)calloc(length, sizeof(char));
+        table[index].code = (char*)calloc(length + 1, sizeof(char));
         for(int i = 0; i < length; i++){
             table[index].code[i] = (char)code[i];
         }
@@ -119,6 +120,8 @@ int compreession(char* route, int* data){
     char* code = (char*)malloc(sizeof(char)*8);
     drawTree(&node[count]);
     fillCodeTable(&node[count], table, 0, 0, code);
+
+    writeToFile(route);
 
 
     free(code);
