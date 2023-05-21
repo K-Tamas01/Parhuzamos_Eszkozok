@@ -5,6 +5,16 @@
 #include <string.h>
 #include <sys/stat.h>
 
+void createDirectory(char* directory){
+    struct stat st;
+    if (stat(directory, &st) != 0) {
+        int status = mkdir(directory, 0700);
+        if (status != 0) {
+            printf("[ERROR] Failed to create folder.\n");
+        }
+    }
+}
+
 void writeToFile(char* file, struct charTable* table, char* characters, int size, int count){
     int routeLength = 0;
     int dirLength = 0;
@@ -13,9 +23,12 @@ void writeToFile(char* file, struct charTable* table, char* characters, int size
         if(file[dirLength] != '/') dirLength++;
     }while(file[routeLength] != '\0');
 
-    char* fullRoute = (char*)malloc((sizeof(char) * routeLength) + 5);
-    char* folderPath = (char*)malloc((sizeof(char) * routeLength) + 5);
+    char* fullRoute = (char*)malloc(sizeof(char) * (routeLength + 5 + 1));
+    char* folderPath = (char*)malloc(sizeof(char) * (dirLength + 5 + 1));
     char* extended = ".huf";
+
+    memset(fullRoute, 0, sizeof(char) * (routeLength + 5 + 1));
+    memset(folderPath, 0, sizeof(char) * (dirLength + 5 + 1));
 
     for(int i = 0; i < dirLength; i++){
         fullRoute[i] = file[i];
@@ -29,13 +42,18 @@ void writeToFile(char* file, struct charTable* table, char* characters, int size
         fullRoute[i + 4] = file[i];
     }
 
-    struct stat st;
-    if (stat(folderPath, &st) != 0) {
-        int status = mkdir(folderPath, 0700);
-        if (status != 0) {
-            printf("[ERROR] Failed to create folder.\n");
+    int end = 0, start = 0;
+    char dir[256] = {0};
+    do{
+        if(fullRoute[end] == '/'){
+            for(int i = start; i < end; i++){
+                dir[i] = fullRoute[i];
+            }
+            createDirectory(dir);
         }
-    }
+        end++;
+    }while(end < routeLength);
+    printf("\n");
 
     FILE* fileWrite = fopen(fullRoute, "w+");
     if(fileWrite == NULL){
@@ -57,6 +75,7 @@ void writeToFile(char* file, struct charTable* table, char* characters, int size
 
     fclose(fileWrite);
 
+    free(folderPath);
     free(fullRoute);
     return;
 }
